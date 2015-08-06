@@ -78,14 +78,14 @@
   args:
     creates: "{{ openshift_master_policy }}"
   notify:
-  - restart {{ product_type }}-master
+  - restart master
 
 - name: Create the scheduler config
   template:
     dest: "{{ openshift_master_scheduler_conf }}"
     src: scheduler.json.j2
   notify:
-  - restart {{ product_type }}-master
+  - restart master
 
 - name: Install httpd-tools if needed
   yum: pkg=httpd-tools state=present
@@ -107,7 +107,7 @@
     dest: "{{ openshift_master_config_file }}"
     src: master.yaml.v1.j2
   notify:
-  - restart {{ product_type }}-master
+  - restart master
 
 - name: Configure master settings
   lineinfile:
@@ -120,7 +120,7 @@
     - regex: '^CONFIG_FILE='
       line: "CONFIG_FILE={{ openshift_master_config_file }}"
   notify:
-  - restart {{ product_type }}-master
+  - restart master
 
 - name: Start and enable master
   service: name={{ product_type }}-master enabled=yes state=started
