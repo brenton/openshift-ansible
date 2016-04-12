@@ -56,6 +56,9 @@
     l_common_version: "{{ common_version.stdout | default('0.0', True) }}"
   when: not openshift.common.is_containerized | bool
 
+- debug: var=openshift
+- debug: var=l_common_version
+
 - name: Set docker version to be installed
   set_fact:
     docker_version: "{{ '1.8.2' }}"
