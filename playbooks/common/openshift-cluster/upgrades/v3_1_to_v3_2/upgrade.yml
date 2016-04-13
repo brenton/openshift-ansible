@@ -11,13 +11,13 @@
   - include: docker_upgrade.yml
     when: not openshift.common.is_atomic | bool
 
-# The cli image is used by openshift_facts to determine the currently installed
+# The cli image is used by openshift_docker_facts to determine the currently installed
 # version.  We need to explicitly pull the latest image to handle cases where
 # the locally cached 'latest' tag is older the g_new_version.
 - name: Download cli image
   hosts: oo_masters_to_config:oo_nodes_to_config
   roles:
-  - openshift_facts
+  - openshift_docker_facts
   tasks:
   - name: Pull Images
     command: >
