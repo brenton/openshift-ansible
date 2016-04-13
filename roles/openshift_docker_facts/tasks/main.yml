@@ -58,6 +58,7 @@
 
 - debug: var=openshift
 - debug: var=l_common_version
+- pause:
 
 - name: Set docker version to be installed
   set_fact:

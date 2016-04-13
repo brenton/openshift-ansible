@@ -16,6 +16,9 @@
     l_image_tag: "{{ openshift_image_tag }}"
   when: openshift.common.is_containerized is defined and openshift.common.is_containerized | bool and openshift_image_tag is defined
 
+- debug: var=l_image_tag
+- pause: 
+
 - name: Set post docker install facts
   openshift_facts:
     role: "{{ item.role }}"
