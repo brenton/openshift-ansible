@@ -48,6 +48,9 @@
   changed_when: false
   when: not openshift.common.is_containerized | bool
 
+
+docker facts are set too late   :w
+
 - set_fact:
     l_common_version: "{{ openshift_image_tag | default('0.0', True) | oo_image_tag_to_rpm_version }}"
   when: openshift.common.is_containerized | bool
