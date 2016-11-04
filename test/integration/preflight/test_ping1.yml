@@ -1,6 +1,0 @@
----
-- hosts: localhost
-  gather_facts: no
-  tasks:
-  - name: test ping 1
-    ping:
