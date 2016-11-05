@@ -1,0 +1,7 @@
+---
+- hosts: localhost
+  tasks:
+  - name: build and tag image
+    docker_image:
+      name: check-yum-update
+      path: docker

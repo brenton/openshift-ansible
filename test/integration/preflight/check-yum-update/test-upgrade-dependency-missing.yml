@@ -1,0 +1,13 @@
+---
+- hosts: localhost
+  vars:
+    container_name: check-yum-update-dep-missing
+  tasks:
+
+  - include: tasks/create-test-container.yml
+
+  - name: test should fail; cannot yum update due to dependencies
+    delegate_to: "{{ container_name }}"
+    action: check_yum_update
+
+  - include: tasks/delete-test-container.yml

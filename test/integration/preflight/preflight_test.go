@@ -2,13 +2,46 @@ package preflight
 
 import (
 	"bytes"
+	"flag"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 )
+
+var prebuildPlays = []string{
+	"check-yum-update/build.yml",
+}
+
+// TestMain ensure that the necessary build steps are performed
+// (in parallel) prior to running the tests.
+func TestMain(m *testing.M) {
+	flag.Parse()
+	var wg sync.WaitGroup
+	wg.Add(len(prebuildPlays))
+	for _, file := range prebuildPlays {
+		go func(file string) {
+			runPlaybook(file)
+			wg.Done()
+		}(file)
+	}
+	wg.Wait()
+	os.Exit(m.Run())
+}
+
+// runPlaybook runs a single playbook and exits if it fails
+func runPlaybook(file string) {
+	cmd := exec.Command("ansible-playbook", file)
+	cmd.Env = append(os.Environ(), "ANSIBLE_FORCE_COLOR=1")
+	if output, err := cmd.CombinedOutput(); err != nil {
+		fmt.Printf("Pre-run build laybook failed: %s\n%s", file, output)
+		os.Exit(1)
+	}
+}
 
 // A PlaybookTest executes a given Ansible playbook and checks the exit code and
 // output contents.
@@ -27,25 +60,26 @@ func (p PlaybookTest) Run(t *testing.T) {
 
 	cmd := exec.Command("ansible-playbook", p.Path)
 	cmd.Env = append(os.Environ(), "ANSIBLE_FORCE_COLOR=1")
-	b, err := cmd.CombinedOutput()
+	bytesOut, err := cmd.CombinedOutput()
 
 	// Check exit code.
 	if (err == nil) && (p.ExitCode != 0) {
-		p.checkExitCode(t, 0, p.ExitCode, cmd, b)
+		p.checkExitCode(t, 0, p.ExitCode, cmd, bytesOut)
 	}
 	if (err != nil) && (p.ExitCode == 0) {
 		got, ok := getExitCode(err)
 		if !ok {
+			p.logCmdAndOutput(t, cmd, bytesOut)
 			t.Fatalf("unexpected error: %#v", err)
-			p.logCmdAndOutput(t, cmd, b)
 		}
-		p.checkExitCode(t, got, p.ExitCode, cmd, b)
+		p.checkExitCode(t, got, p.ExitCode, cmd, bytesOut)
 	}
 
 	// Check output contents.
-	for _, s := range p.Output {
-		if !bytes.Contains(b, []byte(s)) {
-			t.Errorf("got:\n%s\nwant to contain %q", b, s)
+	for _, search := range p.Output {
+		if !bytes.Contains(bytesOut, []byte(search)) {
+			p.logCmdAndOutput(t, cmd, bytesOut)
+			t.Errorf("wanted that to contain %q", search)
 		}
 	}
 }
@@ -70,8 +104,8 @@ func (p PlaybookTest) checkExitCode(t *testing.T, got, want int, cmd *exec.Cmd, 
 	if got == want {
 		return
 	}
-	t.Fatalf("got exit code %v, want %v", got, want)
 	p.logCmdAndOutput(t, cmd, output)
+	t.Fatalf("got exit code %v, wanted %v", got, want)
 }
 
 // logCmdAndOutput logs how to re-run a command and a summary of the output of
