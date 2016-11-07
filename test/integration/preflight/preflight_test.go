@@ -90,6 +90,17 @@ func (p PlaybookTest) logCmdAndOutput(t *testing.T, cmd *exec.Cmd, output []byte
 	t.Logf("command: (cd %s && %s)\noutput:\n%s", dir, strings.Join(cmd.Args, " "), output)
 }
 
+func TestBYOCentOS7(t *testing.T) {
+	PlaybookTest{
+		Path:     "playbooks/byo_centos7.yml",
+		ExitCode: 2,
+		Output: []string{
+			// TODO(rhcarvalho): update test playbook to go past this error.
+			"The error was: KeyError: 'ansible_default_ipv4'",
+		},
+	}.Run(t)
+}
+
 // note: TestPing and TestFail below are just placeholders. The idea is to
 // replace them with tests that call more intesting playbooks. However, the
 // initial structure of the tests may be just like that: run a command, capture

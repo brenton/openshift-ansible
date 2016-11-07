@@ -1,0 +1,21 @@
+---
+- name: Setup CentOS 7 origin installation
+  gather_facts: no
+  hosts: localhost
+  tasks:
+    # - name: build container
+    #   ...
+    - name: start container
+      docker_container:
+        name: oa_test_integ_byo_centos7
+        image: centos:7
+        command: sleep infinity
+        recreate: yes
+    - name: add host
+      add_host:
+        name: oa_test_integ_byo_centos7
+        ansible_connection: docker
+        groups: masters,nodes
+        deployment_type: origin
+- name: Run installation
+  include: ../../../../playbooks/byo/config.yml
