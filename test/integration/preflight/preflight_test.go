@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+// A PlaybookTest executes a given Ansible playbook and checks the exit code and
+// output contents.
 type PlaybookTest struct {
 	// inputs
 	Path string
@@ -15,7 +17,9 @@ type PlaybookTest struct {
 	Output   []string // zero or more strings that should be in the output
 }
 
+// Run runs the PlaybookTest.
 func (p PlaybookTest) Run(t *testing.T) {
+	// A PlaybookTest is intented to be run in parallel with other tests.
 	t.Parallel()
 	cmd := exec.Command("ansible-playbook", p.Path)
 	b, err := cmd.CombinedOutput()
