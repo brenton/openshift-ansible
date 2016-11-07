@@ -106,7 +106,7 @@ func TestPing(t *testing.T) {
 func TestFail(t *testing.T) {
 	PlaybookTest{
 		Path:     "test_fail.yml",
-		ExitCode: 1,
+		ExitCode: 2,
 		Output:   []string{"[test fail]", `"msg": "Failed as requested from task"`},
 	}.Run(t)
 }
