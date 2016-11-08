@@ -148,7 +148,6 @@ def hostname_valid(hostname):
     if (not hostname or
             hostname.startswith('localhost') or
             hostname.endswith('localdomain') or
-            hostname.endswith('novalocal') or
             len(hostname.split('.')) < 2):
         return False
 
@@ -363,15 +362,12 @@ def normalize_openstack_facts(metadata, facts):
     facts['network']['ip'] = local_ipv4
     facts['network']['public_ip'] = metadata['ec2_compat']['public-ipv4']
 
-    for f_var, h_var, ip_var in [('hostname',        'hostname',        'local-ipv4'),
-                                 ('public_hostname', 'public-hostname', 'public-ipv4')]:
-        try:
-            if socket.gethostbyname(metadata['ec2_compat'][h_var]) == metadata['ec2_compat'][ip_var]:
-                facts['network'][f_var] = metadata['ec2_compat'][h_var]
-            else:
-                facts['network'][f_var] = metadata['ec2_compat'][ip_var]
-        except socket.gaierror:
-            facts['network'][f_var] = metadata['ec2_compat'][ip_var]
+    # TODO: verify local hostname makes sense and is resolvable
+    facts['network']['hostname'] = metadata['hostname']
+
+    # TODO: verify that public hostname makes sense and is resolvable
+    pub_h = metadata['ec2_compat']['public-hostname']
+    facts['network']['public_hostname'] = pub_h
 
     return facts
 
@@ -901,10 +897,29 @@ def set_sdn_facts_if_unset(facts, system_facts):
             facts['common']['sdn_network_plugin_name'] = plugin
 
     if 'master' in facts:
+        # set defaults for sdn_cluster_network_cidr and sdn_host_subnet_length
+        # these might be overridden if they exist in the master config file
+        sdn_cluster_network_cidr = '10.128.0.0/14'
+        sdn_host_subnet_length = '9'
+
+        master_cfg_path = os.path.join(facts['common']['config_base'],
+                                       'master/master-config.yaml')
+        if os.path.isfile(master_cfg_path):
+            with open(master_cfg_path, 'r') as master_cfg_f:
+                config = yaml.safe_load(master_cfg_f.read())
+
+            if 'networkConfig' in config:
+                if 'clusterNetworkCIDR' in config['networkConfig']:
+                    sdn_cluster_network_cidr = \
+                        config['networkConfig']['clusterNetworkCIDR']
+                if 'hostSubnetLength' in config['networkConfig']:
+                    sdn_host_subnet_length = \
+                        config['networkConfig']['hostSubnetLength']
+
         if 'sdn_cluster_network_cidr' not in facts['master']:
-            facts['master']['sdn_cluster_network_cidr'] = '10.1.0.0/16'
+            facts['master']['sdn_cluster_network_cidr'] = sdn_cluster_network_cidr
         if 'sdn_host_subnet_length' not in facts['master']:
-            facts['master']['sdn_host_subnet_length'] = '8'
+            facts['master']['sdn_host_subnet_length'] = sdn_host_subnet_length
 
     if 'node' in facts and 'sdn_mtu' not in facts['node']:
         node_ip = facts['common']['ip']
@@ -919,14 +934,6 @@ def set_sdn_facts_if_unset(facts, system_facts):
                 if 'ipv4' in val and val['ipv4'].get('address') == node_ip:
                     facts['node']['sdn_mtu'] = str(mtu - 50)
 
-    return facts
-
-def set_nodename(facts):
-    if 'node' in facts and 'common' in facts:
-        if 'cloudprovider' in facts and facts['cloudprovider']['kind'] == 'openstack':
-            facts['node']['nodename'] = facts['provider']['metadata']['hostname'].replace('.novalocal', '')
-        else:
-            facts['node']['nodename'] = facts['common']['hostname'].lower()
     return facts
 
 def migrate_oauth_template_facts(facts):
@@ -1060,6 +1067,7 @@ values provided as a list. Hence the gratuitous use of ['foo'] below.
                     kubelet_args['cloud-config'] = [cloud_cfg_path + '/openstack.conf']
                 if facts['cloudprovider']['kind'] == 'gce':
                     kubelet_args['cloud-provider'] = ['gce']
+                    kubelet_args['cloud-config'] = [cloud_cfg_path + '/gce.conf']
 
         # Automatically add node-labels to the kubeletArguments
         # parameter. See BZ1359848 for additional details.
@@ -1102,6 +1110,7 @@ def build_controller_args(facts):
                     controller_args['cloud-config'] = [cloud_cfg_path + '/openstack.conf']
                 if facts['cloudprovider']['kind'] == 'gce':
                     controller_args['cloud-provider'] = ['gce']
+                    kubelet_args['cloud-config'] = [cloud_cfg_path + '/gce.conf']
         if controller_args != {}:
             facts = merge_facts({'master': {'controller_args': controller_args}}, facts, [], [])
     return facts
@@ -1122,6 +1131,7 @@ def build_api_server_args(facts):
                     api_server_args['cloud-config'] = [cloud_cfg_path + '/openstack.conf']
                 if facts['cloudprovider']['kind'] == 'gce':
                     api_server_args['cloud-provider'] = ['gce']
+                    kubelet_args['cloud-config'] = [cloud_cfg_path + '/gce.conf']
         if api_server_args != {}:
             facts = merge_facts({'master': {'api_server_args': api_server_args}}, facts, [], [])
     return facts
@@ -1302,7 +1312,7 @@ def apply_provider_facts(facts, provider_facts):
 
         facts['common'][h_var] = choose_hostname(
             [provider_facts['network'].get(h_var)],
-            facts['common'][h_var]
+            facts['common'][ip_var]
         )
 
     facts['provider'] = provider_facts
@@ -1510,8 +1520,8 @@ def set_proxy_facts(facts):
                 safe_get_bool(common['generate_no_proxy_hosts']):
                 if 'no_proxy_internal_hostnames' in common:
                     common['no_proxy'].extend(common['no_proxy_internal_hostnames'].split(','))
-                common['no_proxy'].append('.' + common['dns_domain'])
-            # We always add ourselves no matter what
+            # We always add local dns domain and ourselves no matter what
+            common['no_proxy'].append('.' + common['dns_domain'])
             common['no_proxy'].append(common['hostname'])
             common['no_proxy'] = sort_unique(common['no_proxy'])
         facts['common'] = common
@@ -1771,8 +1781,8 @@ class OpenShiftFacts(object):
         facts = set_node_schedulability(facts)
         facts = set_selectors(facts)
         facts = set_identity_providers_if_unset(facts)
-        facts = set_sdn_facts_if_unset(facts, self.system_facts)
         facts = set_deployment_facts_if_unset(facts)
+        facts = set_sdn_facts_if_unset(facts, self.system_facts)
         facts = set_container_facts_if_unset(facts)
         facts = build_kubelet_args(facts)
         facts = build_controller_args(facts)
@@ -1785,7 +1795,6 @@ class OpenShiftFacts(object):
         facts = set_proxy_facts(facts)
         if not safe_get_bool(facts['common']['is_containerized']):
             facts = set_installed_variant_rpm_facts(facts)
-        facts = set_nodename(facts)
         return dict(openshift=facts)
 
     def get_defaults(self, roles, deployment_type, deployment_subtype):
