@@ -22,7 +22,7 @@ type PlaybookTest struct {
 
 // Run runs the PlaybookTest.
 func (p PlaybookTest) Run(t *testing.T) {
-	// A PlaybookTest is intented to be run in parallel with other tests.
+	// A PlaybookTest is intended to be run in parallel with other tests.
 	t.Parallel()
 
 	cmd := exec.Command("ansible-playbook", p.Path)
