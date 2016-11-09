@@ -78,11 +78,16 @@ func (p PlaybookTest) Run(t *testing.T) {
 	}
 
 	// Check output contents.
+	var missing []string
 	for _, s := range p.Output {
 		if !bytes.Contains(b, []byte(s)) {
-			p.logCmdAndOutput(t, cmd, b)
-			t.Errorf("wanted that to contain %q", s)
+			missing = append(missing, s)
 		}
+	}
+	if len(missing) > 0 {
+		t.Logf("missing in output: %q", missing)
+		p.logCmdAndOutput(t, cmd, b)
+		t.FailNow()
 	}
 }
 
