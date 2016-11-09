@@ -121,7 +121,7 @@ func (p PlaybookTest) checkExitCode(t *testing.T, got, want int, cmd *exec.Cmd, 
 // its last execution for debugging.
 func (p PlaybookTest) logCmdAndOutput(t *testing.T, cmd *exec.Cmd, output []byte) {
 	const maxLines = 10
-	lines := bytes.Split(output, []byte("\n"))
+	lines := bytes.Split(bytes.TrimRight(output, "\n"), []byte("\n"))
 	if len(lines) > maxLines {
 		lines = append([][]byte{[]byte("...")}, lines[len(lines)-maxLines:len(lines)]...)
 	}
