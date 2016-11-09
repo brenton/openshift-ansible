@@ -37,8 +37,10 @@ func TestMain(m *testing.M) {
 func runPlaybook(file string) {
 	cmd := exec.Command("ansible-playbook", file)
 	cmd.Env = append(os.Environ(), "ANSIBLE_FORCE_COLOR=1")
-	if output, err := cmd.CombinedOutput(); err != nil {
-		fmt.Printf("Pre-run build playbook failed: %s\n%s", file, output)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Pre-run build playbook failed: %s: %s\n", file, err)
 		os.Exit(1)
 	}
 }
