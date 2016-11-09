@@ -1,0 +1,17 @@
+---
+- hosts: localhost
+  vars:
+    container_name: check-yum-update-repo-unreachable
+  tasks:
+
+  - include: tasks/create-test-container.yml
+
+  - name: remove the local repo entirely
+    delegate_to: "{{ container_name }}"
+    file: path=/mnt/localrepo state=absent
+
+  - name: test should fail; repo cannot reach its url
+    delegate_to: "{{ container_name }}"
+    action: check_yum_update
+
+  - include: tasks/delete-test-container.yml

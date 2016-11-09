@@ -1,0 +1,19 @@
+---
+- hosts: localhost
+  vars:
+    container_name: check-yum-update-repo-broken
+  tasks:
+
+  - include: tasks/create-test-container.yml
+
+  - name: break the local yum repo
+    delegate_to: "{{ container_name }}"
+    replace: dest=/etc/yum.repos.d/local.repo backup=no
+             regexp='^baseurl'
+             replace='#baseurl'
+
+  - name: test should fail; reports broken repo
+    delegate_to: "{{ container_name }}"
+    action: check_yum_update
+
+  - include: tasks/delete-test-container.yml

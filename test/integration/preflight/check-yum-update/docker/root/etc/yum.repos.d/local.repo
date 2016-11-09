@@ -1,0 +1,5 @@
+[local]
+name=local
+baseurl=file:///mnt/localrepo
+enabled=1
+gpgcheck=0
