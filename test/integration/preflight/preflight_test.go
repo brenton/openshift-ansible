@@ -71,7 +71,7 @@ func (p PlaybookTest) Run(t *testing.T) {
 	if (err != nil) && (p.ExitCode == 0) {
 		got, ok := getExitCode(err)
 		if !ok {
-			t.Logf("unexpected error: %#v", err)
+			t.Logf("unexpected error (%T): %[1]v", err)
 			p.logCmdAndOutput(t, cmd, b)
 			t.FailNow()
 		}
