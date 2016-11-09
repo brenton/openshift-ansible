@@ -14,7 +14,7 @@ import (
 )
 
 var prebuildPlays = []string{
-	"check-yum-update/build.yml",
+	"yum_update/build.yml",
 }
 
 // TestMain ensure that the necessary build steps are performed
