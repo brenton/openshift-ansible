@@ -32,22 +32,37 @@ def main():
         bail("Unexpected error with yum repository: %s" % sys.exc_info()[1])
 
     updates = yb.update()
+    try:
+        txnResult, txnMsgs = yb.buildTransaction()
+    except:
+        bail("Unexpected error during dependency resolution: %s" % sys.exc_info()[1])
+
     # find out if there are any errors with the update
-    # for error of type:
+    if txnResult == 0: # "normal exit" meaning there's nothing to upgrade
+        pass
+    elif txnResult == 1: # error with transaction
+        userMsg = "Could not perform yum update.\n"
+        if len(txnMsgs) > 0:
+            userMsg += "Errors from resolution:\n"
+            for msg in txnMsgs:
+                userMsg += "  %s\n" % msg
+        bail(userMsg)
+    # TODO: it would be nice depending on the problem:
     #   1. dependency for update not found
-    #    * retrieve the dependency tree
+    #    * construct the dependency tree
     #    * find the installed package(s) that required the missing dep
     #    * determine if any of these packages matter to openshift
     #    * build helpful error output
     #   2. conflicts among packages in available content
     #    * analyze dependency tree and build helpful error output
     #   3. other/unknown
-    #    * just report the problem verbatim
+    #    * report the problem verbatim
+    #    * add to this list as we come across problems we can clearly diagnose
+    elif txnResult == 2: # everything resolved fine
+        pass
+    else:
+        bail("Unknown error(s) from dependency resolution. Exit Code: %d:\n%s" % (txnResult, txnMsgs))
 
-    #thing = type(updates[0])
-    #if updates:
-    #    for pkg in updates:
-    #        print "%s will be an update" % pkg
     module.exit_json(changed=False)
 
 if __name__ == '__main__':

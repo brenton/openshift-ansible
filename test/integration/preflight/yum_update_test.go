@@ -8,7 +8,7 @@ func TestUpgradeDependencyMissing(t *testing.T) {
 	PlaybookTest{
 		Path:     "yum_update/test-upgrade-dependency-missing.yml",
 		ExitCode: 1,
-		Output:   []string{"cannot yum update due to dependencies", "yum update will fail due to missing dependency"},
+		Output:   []string{"Could not perform yum update", "Errors from resolution"},
 	}.Run(t)
 }
 
