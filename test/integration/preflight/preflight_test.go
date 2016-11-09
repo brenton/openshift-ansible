@@ -130,7 +130,7 @@ func (p PlaybookTest) logCmdAndOutput(t *testing.T, cmd *exec.Cmd, output []byte
 	if err != nil {
 		panic(err)
 	}
-	t.Logf("command: (cd %s && %s)\noutput:\n%s", dir, strings.Join(cmd.Args, " "), output)
+	t.Logf("\n$ (cd %s && %s)\n%s", dir, strings.Join(cmd.Args, " "), output)
 }
 
 func TestBYOCentOS7(t *testing.T) {
