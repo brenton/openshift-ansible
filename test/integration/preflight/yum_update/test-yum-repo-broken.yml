@@ -8,9 +8,11 @@
 
   - name: break the local yum repo
     delegate_to: "{{ container_name }}"
-    replace: dest=/etc/yum.repos.d/local.repo backup=no
-             regexp='^baseurl'
-             replace='#baseurl'
+    replace:
+      dest: /etc/yum.repos.d/local.repo
+      backup: no
+      regexp: "^baseurl"
+      replace: "#baseurl"
 
   - name: test should fail; reports broken repo
     delegate_to: "{{ container_name }}"
