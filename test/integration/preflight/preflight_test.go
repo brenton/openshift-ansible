@@ -71,8 +71,9 @@ func (p PlaybookTest) Run(t *testing.T) {
 	if (err != nil) && (p.ExitCode == 0) {
 		got, ok := getExitCode(err)
 		if !ok {
+			t.Logf("unexpected error: %#v", err)
 			p.logCmdAndOutput(t, cmd, b)
-			t.Fatalf("unexpected error: %#v", err)
+			t.FailNow()
 		}
 		p.checkExitCode(t, got, p.ExitCode, cmd, b)
 	}
@@ -111,8 +112,9 @@ func (p PlaybookTest) checkExitCode(t *testing.T, got, want int, cmd *exec.Cmd, 
 	if got == want {
 		return
 	}
+	t.Logf("got exit code %v, want %v", got, want)
 	p.logCmdAndOutput(t, cmd, output)
-	t.Fatalf("got exit code %v, wanted %v", got, want)
+	t.FailNow()
 }
 
 // logCmdAndOutput logs how to re-run a command and a summary of the output of
