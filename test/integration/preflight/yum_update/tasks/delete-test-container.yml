@@ -1,6 +1,6 @@
 ---
 - name: delete test container
-  docker:
+  docker_container:
     name: "{{ container_name }}"
     image: check-yum-update
     state: absent
