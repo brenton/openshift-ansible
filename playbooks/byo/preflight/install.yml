@@ -1,0 +1,50 @@
+---
+- hosts: all
+  tasks:
+  - name: determine if yum update will work
+    action: check_yum_update
+
+- hosts: masters
+  when:
+  tasks:
+  - name: determine if yum install of master pkgs will work
+    check_yum_update:
+      packages:
+        - atomic-openshift
+        - atomic-openshift-clients
+        - atomic-openshift-master
+        - etcd
+        - bash-completion
+        - cockpit-bridge
+        - cockpit-docker
+        - cockpit-kubernetes
+        - cockpit-shell
+        - cockpit-ws
+        - httpd-tools
+
+- hosts: nodes
+  tasks:
+  - name: determine if yum install of node pkgs will work
+    check_yum_update:
+      packages:
+        - atomic-openshift
+        - atomic-openshift-node
+        - atomic-openshift-sdn-ovs
+        - docker
+        - PyYAML
+        - firewalld
+        - iptables
+        - iptables-services
+        - nfs-utils
+        - ntp
+        - yum-utils
+        - dnsmasq
+        - libselinux-python
+        - ceph-common
+        - glusterfs-fuse
+        - iscsi-initiator-utils
+        - pyparted
+        - python-httplib2
+        - openssl
+        - flannel
+        - bind

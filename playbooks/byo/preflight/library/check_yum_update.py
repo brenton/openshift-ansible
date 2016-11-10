@@ -64,7 +64,6 @@ def main():
         for pkg in noSuchPkg:
             userMsg += "  %s\n" % pkg
         userMsg += "You may need to enable one or more repos to make this content available."
-        userMsg += "\n%s" % packages
         bail(userMsg)
 
     try:
