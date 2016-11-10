@@ -1,0 +1,16 @@
+---
+- hosts: localhost
+  vars:
+    container_name: check-yum-install-missing-required
+  tasks:
+
+  - include: tasks/create-test-container.yml
+
+  - name: test should fail; cannot find aos-master
+    delegate_to: "{{ container_name }}"
+    check_yum_update:
+      packages:
+        - docker
+        - atomic-openshift-master
+
+  - include: tasks/delete-test-container.yml

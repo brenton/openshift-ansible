@@ -4,6 +4,14 @@ import (
 	"testing"
 )
 
+func TestInstallMissingRequired(t *testing.T) {
+	PlaybookTest{
+		Path:     "yum_update/test-install-missing-required.yml",
+		ExitCode: 1,
+		Output:   []string{"Cannot install all of the necessary packages"},
+	}.Run(t)
+}
+
 func TestUpgradeDependencyMissing(t *testing.T) {
 	PlaybookTest{
 		Path:     "yum_update/test-upgrade-dependency-missing.yml",

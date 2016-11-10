@@ -1,6 +1,12 @@
 #!/usr/bin/python
 
-# tests whether a plain "yum update" will succeed
+"""
+Ansible module to test whether a yum update or install will succeed,
+without actually performing it or running yum.
+parameters:
+  packages: (optional) A list of package names to install or update.
+            If omitted, all installed RPMs are considered for updates.
+"""
 
 import os
 import sys
@@ -10,9 +16,18 @@ from ansible.module_utils.basic import AnsibleModule
 
 def main():
     module = AnsibleModule(
-        argument_spec = dict()
+        argument_spec = dict(
+            packages  = dict(type='list', default=[])
+        ),
+        supports_check_mode = True
     )
+    sys.stdout = os.devnull # mute yum so it doesn't break our output
+
+    def _unmute():
+        sys.stdout = sys.__stdout__
+
     def bail(error):
+        _unmute()
         module.fail_json(msg=error)
 
     yb = yum.YumBase()
@@ -31,14 +46,34 @@ def main():
     except:
         bail("Unexpected error with yum repository: %s" % sys.exc_info()[1])
 
-    updates = yb.update()
+    packages = module.params['packages']
+    noSuchPkg = []
+    for pkg in packages:
+        try:
+            yb.install(name=pkg)
+        except yum.Errors.InstallError as e:
+            noSuchPkg.append(pkg)
+        except:
+            bail("Unexpected error with yum install/update: %s" % sys.exc_info()[1])
+    if not packages:
+        # no packages requested means test a yum update of everything
+        yb.update()
+    elif noSuchPkg:
+        # wanted specific packages to install but some aren't available
+        userMsg = "Cannot install all of the necessary packages. Unavailable:\n"
+        for pkg in noSuchPkg:
+            userMsg += "  %s\n" % pkg
+        userMsg += "You may need to enable one or more repos to make this content available."
+        userMsg += "\n%s" % packages
+        bail(userMsg)
+
     try:
         txnResult, txnMsgs = yb.buildTransaction()
     except:
         bail("Unexpected error during dependency resolution: %s" % sys.exc_info()[1])
 
-    # find out if there are any errors with the update
-    if txnResult == 0: # "normal exit" meaning there's nothing to upgrade
+    # find out if there are any errors with the update/install
+    if txnResult == 0: # "normal exit" meaning there's nothing to install/update
         pass
     elif txnResult == 1: # error with transaction
         userMsg = "Could not perform yum update.\n"
@@ -63,6 +98,7 @@ def main():
     else:
         bail("Unknown error(s) from dependency resolution. Exit Code: %d:\n%s" % (txnResult, txnMsgs))
 
+    _unmute()
     module.exit_json(changed=False)
 
 if __name__ == '__main__':
