@@ -1,18 +1,42 @@
 ---
+#- hosts: all
+  #  roles:
+  #  - openshift_version
+
 - hosts: all
+  name: determine if yum update will work
   tasks:
-  - name: determine if yum update will work
-    action: check_yum_update
+  - action: check_yum_update
+    when:
+      - containerized is undefined or not containerized
 
 - hosts: masters
-  when:
+  name: determine if yum install of master pkgs will work
   tasks:
-  - name: determine if yum install of master pkgs will work
+  - name: main packages for enterprise
+    when:
+      - containerized is undefined or not containerized
+      - deployment_type == "openshift-enterprise"
+      - openshift_release == "v3.3"
     check_yum_update:
       packages:
         - atomic-openshift
         - atomic-openshift-clients
         - atomic-openshift-master
+  - name: main packages for origin
+    when:
+      - containerized is undefined or not containerized
+      - deployment_type == "origin"
+    check_yum_update:
+      packages:
+        - origin
+        - origin-clients
+        - origin-master
+  - name: other master packages
+    when:
+      - containerized is undefined or not containerized
+    check_yum_update:
+      packages:
         - etcd
         - bash-completion
         - cockpit-bridge
@@ -23,13 +47,32 @@
         - httpd-tools
 
 - hosts: nodes
+  name: determine if yum install of node pkgs will work
   tasks:
-  - name: determine if yum install of node pkgs will work
+  - name: main packages for enterprise
+    when:
+      - containerized is undefined or not containerized
+      - deployment_type == "openshift-enterprise"
+      - openshift_release == "v3.3"
     check_yum_update:
       packages:
         - atomic-openshift
         - atomic-openshift-node
         - atomic-openshift-sdn-ovs
+  - name: main packages for origin
+    when:
+      - containerized is undefined or not containerized
+      - deployment_type == "origin"
+    check_yum_update:
+      packages:
+        - origin
+        - origin-node
+        - origin-sdn-ovs
+  - name: other node packages
+    when:
+      - containerized is undefined or not containerized
+    check_yum_update:
+      packages:
         - docker
         - PyYAML
         - firewalld
