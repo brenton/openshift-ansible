@@ -13,5 +13,10 @@
   - name: test should fail; repo cannot reach its url
     delegate_to: "{{ container_name }}"
     action: check_yum_update
+    ignore_errors: True
+    register: test_result
 
   - include: tasks/delete-test-container.yml
+
+  - fail: msg="{{ test_result.msg }}"
+    when: test_result|failed

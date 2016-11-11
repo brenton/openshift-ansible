@@ -12,5 +12,10 @@
       packages:
         - docker
         - atomic-openshift-master
+    ignore_errors: True
+    register: test_result
 
   - include: tasks/delete-test-container.yml
+
+  - fail: msg="{{ test_result.msg }}"
+    when: test_result|failed
