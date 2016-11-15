@@ -1,9 +1,11 @@
 ---
-#- hosts: all
-  #  roles:
-  #  - openshift_version
+- hosts: OSEv3
+  vars:
+    openshift_deployment_type: "{{ deployment_type | default('openshift-enterprise') }}"
+  roles:
+    - openshift_version
 
-- hosts: all
+- hosts: OSEv3
   name: determine if yum update will work
   tasks:
   - action: check_yum_update
@@ -17,7 +19,7 @@
     when:
       - containerized is undefined or not containerized
       - deployment_type == "openshift-enterprise"
-      - openshift_release == "v3.3"
+      - openshift_release == "3.3"
     check_yum_update:
       packages:
         - atomic-openshift
@@ -53,7 +55,7 @@
     when:
       - containerized is undefined or not containerized
       - deployment_type == "openshift-enterprise"
-      - openshift_release == "v3.3"
+      - openshift_release == "3.3"
     check_yum_update:
       packages:
         - atomic-openshift
