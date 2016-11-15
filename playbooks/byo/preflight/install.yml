@@ -1,25 +1,27 @@
 ---
 - hosts: OSEv3
-  vars:
-    openshift_deployment_type: "{{ deployment_type | default('openshift-enterprise') }}"
-  roles:
-    - openshift_version
+  gather_facts: no
+  tasks:
+    - set_fact:
+        deployment_type: "{{ deployment_type | default('openshift-enterprise') }}"
+        containerized: "{{ containerized | default('no') | bool }}"
 
 - hosts: OSEv3
   name: determine if yum update will work
+  gather_facts: no
   tasks:
   - action: check_yum_update
     when:
-      - containerized is undefined or not containerized
+      - not containerized
 
 - hosts: masters
   name: determine if yum install of master pkgs will work
+  gather_facts: no
   tasks:
   - name: main packages for enterprise
     when:
-      - containerized is undefined or not containerized
+      - not containerized
       - deployment_type == "openshift-enterprise"
-      - openshift_release == "3.3"
     check_yum_update:
       packages:
         - atomic-openshift
@@ -27,7 +29,7 @@
         - atomic-openshift-master
   - name: main packages for origin
     when:
-      - containerized is undefined or not containerized
+      - not containerized
       - deployment_type == "origin"
     check_yum_update:
       packages:
@@ -36,7 +38,7 @@
         - origin-master
   - name: other master packages
     when:
-      - containerized is undefined or not containerized
+      - not containerized
     check_yum_update:
       packages:
         - etcd
@@ -50,12 +52,12 @@
 
 - hosts: nodes
   name: determine if yum install of node pkgs will work
+  gather_facts: no
   tasks:
   - name: main packages for enterprise
     when:
-      - containerized is undefined or not containerized
+      - not containerized
       - deployment_type == "openshift-enterprise"
-      - openshift_release == "3.3"
     check_yum_update:
       packages:
         - atomic-openshift
@@ -63,7 +65,7 @@
         - atomic-openshift-sdn-ovs
   - name: main packages for origin
     when:
-      - containerized is undefined or not containerized
+      - not containerized
       - deployment_type == "origin"
     check_yum_update:
       packages:
@@ -72,7 +74,7 @@
         - origin-sdn-ovs
   - name: other node packages
     when:
-      - containerized is undefined or not containerized
+      - not containerized
     check_yum_update:
       packages:
         - docker
