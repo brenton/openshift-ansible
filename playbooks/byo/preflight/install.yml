@@ -11,95 +11,101 @@
   name: check content available on all hosts
   gather_facts: no
   tasks:
-  - name: determine if yum update will work
-    action: check_yum_update
-    when:
-      - not containerized
-  - name: determine if expected version matches what is available
-    aos_version:
-      version: "{{ openshift_release }}"
-    when:
-      - not containerized
-      - deployment_type == "openshift-enterprise"
+  - block:
+    - name: determine if yum update will work
+      action: check_yum_update
+      when:
+        - not containerized
+    - name: determine if expected version matches what is available
+      aos_version:
+        version: "{{ openshift_release }}"
+      when:
+        - not containerized
+        - deployment_type == "openshift-enterprise"
+    ignore_errors: yes
 
 - hosts: masters
   name: determine if yum install of master pkgs will work
   gather_facts: no
   tasks:
-  - name: main packages for enterprise
-    when:
-      - not containerized
-      - deployment_type == "openshift-enterprise"
-    check_yum_update:
-      packages:
-        - atomic-openshift
-        - atomic-openshift-clients
-        - atomic-openshift-master
-  - name: main packages for origin
-    when:
-      - not containerized
-      - deployment_type == "origin"
-    check_yum_update:
-      packages:
-        - origin
-        - origin-clients
-        - origin-master
-  - name: other master packages
-    when:
-      - not containerized
-    check_yum_update:
-      packages:
-        - etcd
-        - bash-completion
-        - cockpit-bridge
-        - cockpit-docker
-        - cockpit-kubernetes
-        - cockpit-shell
-        - cockpit-ws
-        - httpd-tools
+  - block:
+    - name: main packages for enterprise
+      when:
+        - not containerized
+        - deployment_type == "openshift-enterprise"
+      check_yum_update:
+        packages:
+          - atomic-openshift
+          - atomic-openshift-clients
+          - atomic-openshift-master
+    - name: main packages for origin
+      when:
+        - not containerized
+        - deployment_type == "origin"
+      check_yum_update:
+        packages:
+          - origin
+          - origin-clients
+          - origin-master
+    - name: other master packages
+      when:
+        - not containerized
+      check_yum_update:
+        packages:
+          - etcd
+          - bash-completion
+          - cockpit-bridge
+          - cockpit-docker
+          - cockpit-kubernetes
+          - cockpit-shell
+          - cockpit-ws
+          - httpd-tools
+    ignore_errors: yes
 
 - hosts: nodes
   name: determine if yum install of node pkgs will work
   gather_facts: no
   tasks:
-  - name: main packages for enterprise
-    when:
-      - not containerized
-      - deployment_type == "openshift-enterprise"
-    check_yum_update:
-      packages:
-        - atomic-openshift
-        - atomic-openshift-node
-        - atomic-openshift-sdn-ovs
-  - name: main packages for origin
-    when:
-      - not containerized
-      - deployment_type == "origin"
-    check_yum_update:
-      packages:
-        - origin
-        - origin-node
-        - origin-sdn-ovs
-  - name: other node packages
-    when:
-      - not containerized
-    check_yum_update:
-      packages:
-        - docker
-        - PyYAML
-        - firewalld
-        - iptables
-        - iptables-services
-        - nfs-utils
-        - ntp
-        - yum-utils
-        - dnsmasq
-        - libselinux-python
-        - ceph-common
-        - glusterfs-fuse
-        - iscsi-initiator-utils
-        - pyparted
-        - python-httplib2
-        - openssl
-        - flannel
-        - bind
+  - block:
+    - name: main packages for enterprise
+      when:
+        - not containerized
+        - deployment_type == "openshift-enterprise"
+      check_yum_update:
+        packages:
+          - atomic-openshift
+          - atomic-openshift-node
+          - atomic-openshift-sdn-ovs
+    - name: main packages for origin
+      when:
+        - not containerized
+        - deployment_type == "origin"
+      check_yum_update:
+        packages:
+          - origin
+          - origin-node
+          - origin-sdn-ovs
+    - name: other node packages
+      when:
+        - not containerized
+      check_yum_update:
+        packages:
+          - docker
+          - PyYAML
+          - firewalld
+          - iptables
+          - iptables-services
+          - nfs-utils
+          - ntp
+          - yum-utils
+          - dnsmasq
+          - libselinux-python
+          - ceph-common
+          - glusterfs-fuse
+          - iscsi-initiator-utils
+          - pyparted
+          - python-httplib2
+          - openssl
+          - flannel
+          - bind
+    ignore_errors: yes
