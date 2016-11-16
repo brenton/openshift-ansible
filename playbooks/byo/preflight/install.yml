@@ -5,14 +5,22 @@
     - set_fact:
         deployment_type: "{{ deployment_type | default('openshift-enterprise') }}"
         containerized: "{{ containerized | default('no') | bool }}"
+        openshift_release: "{{ openshift_release | default('3.3') }}"
 
 - hosts: OSEv3
-  name: determine if yum update will work
+  name: check content available on all hosts
   gather_facts: no
   tasks:
-  - action: check_yum_update
+  - name: determine if yum update will work
+    action: check_yum_update
     when:
       - not containerized
+  - name: determine if expected version matches what is available
+    aos_version:
+      version: "{{ openshift_release }}"
+    when:
+      - not containerized
+      - deployment_type == "openshift-enterprise"
 
 - hosts: masters
   name: determine if yum install of master pkgs will work
