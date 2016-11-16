@@ -63,23 +63,25 @@ def main():
         userMsg = "Cannot install all of the necessary packages. Unavailable:\n"
         for pkg in noSuchPkg:
             userMsg += "  %s\n" % pkg
-        userMsg += "You may need to enable one or more repos to make this content available."
+        userMsg += "You may need to enable one or more yum repositories to make this content available."
         bail(userMsg)
 
     try:
         txnResult, txnMsgs = yb.buildTransaction()
     except:
-        bail("Unexpected error during dependency resolution: %s" % sys.exc_info()[1])
+        bail("Unexpected error during dependency resolution for yum update: \n %s" % sys.exc_info()[1])
 
     # find out if there are any errors with the update/install
     if txnResult == 0: # "normal exit" meaning there's nothing to install/update
         pass
     elif txnResult == 1: # error with transaction
-        userMsg = "Could not perform yum update.\n"
+        userMsg = "Could not perform a yum update.\n"
         if len(txnMsgs) > 0:
-            userMsg += "Errors from resolution:\n"
+            userMsg += "Errors from dependency resolution:\n"
             for msg in txnMsgs:
                 userMsg += "  %s\n" % msg
+            userMsg += "You should resolve these issues before proceeding with an install.\n"
+            userMsg += "You may need to remove or downgrade packages or enable/disable yum repositories."
         bail(userMsg)
     # TODO: it would be nice depending on the problem:
     #   1. dependency for update not found
