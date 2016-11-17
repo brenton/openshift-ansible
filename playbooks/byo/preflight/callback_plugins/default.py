@@ -38,7 +38,28 @@ class CallbackModule(CallbackBase):
 
         self._play = None
         self._last_task_banner = None
+        self._failures = []
         super(CallbackModule, self).__init__()
+
+    def _dump_results(self, result):
+        '''Return the text to output for a result.'''
+        result['_ansible_verbose_always'] = True
+
+        save = {}
+        for key in ['stdout', 'stdout_lines', 'stderr', 'stderr_lines', 'msg']:
+            if key in result:
+                save[key] = result.pop(key)
+
+        output = CallbackBase._dump_results(self, result) # pylint: disable=protected-access
+
+        for key in ['stdout', 'stderr', 'msg']:
+            if key in save and save[key]:
+                output += '\n\n%s:\n\n%s\n' % (key.upper(), save[key])
+
+        for key, value in save.items():
+            result[key] = value
+
+        return output
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
 
@@ -66,7 +87,8 @@ class CallbackModule(CallbackBase):
                 self._display.display("fatal: [%s]: FAILED! => %s" % (result._host.get_name(), self._dump_results(result._result)), color=C.COLOR_ERROR)
 
         if result._task.ignore_errors:
-            self._display.display("...ignoring", color=C.COLOR_SKIP)
+            self._failures.append(result)
+            self._display.display("...continuing", color=C.COLOR_SKIP)
 
     def v2_runner_on_ok(self, result):
 
@@ -253,7 +275,7 @@ class CallbackModule(CallbackBase):
                 colorize(u'ok', t['ok'], C.COLOR_OK),
                 colorize(u'changed', t['changed'], C.COLOR_CHANGED),
                 colorize(u'unreachable', t['unreachable'], C.COLOR_UNREACHABLE),
-                colorize(u'failed', t['failures'], C.COLOR_ERROR)),
+                colorize(u'failed', t['failures'] + len(self._failures), C.COLOR_ERROR)),
                 screen_only=True
             )
 
