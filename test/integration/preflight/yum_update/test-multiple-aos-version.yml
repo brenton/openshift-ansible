@@ -1,17 +1,18 @@
 ---
 - hosts: localhost
   vars:
-    container_name: check-yum-update-dep-missing
+    container_name: check-yum-multiple-aos-version
   tasks:
 
   - include: tasks/create-test-container.yml
 
-  - command: yum-config-manager --enable break-yum
+  - command: yum-config-manager --enable ose-3.2 --enable ose-3.3
     delegate_to: "{{ container_name }}"
 
-  - name: test should fail; cannot yum update due to dependencies
+  - name: test should fail; 3.2 and 3.3 content should not mix
     delegate_to: "{{ container_name }}"
-    action: check_yum_update
+    aos_version:
+      version: v3.3
     ignore_errors: True
     register: test_result
 

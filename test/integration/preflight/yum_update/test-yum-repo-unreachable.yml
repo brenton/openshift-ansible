@@ -6,6 +6,9 @@
 
   - include: tasks/create-test-container.yml
 
+  - command: yum-config-manager --enable break-yum
+    delegate_to: "{{ container_name }}"
+
   - name: remove the local repo entirely
     delegate_to: "{{ container_name }}"
     file: path=/mnt/localrepo state=absent

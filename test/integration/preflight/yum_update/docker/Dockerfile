@@ -9,5 +9,18 @@ RUN cd /root/rpmbuild/SOURCES && \
     rpmbuild -bb /root/break-yum-update.spec  && \
     yum install -y /root/rpmbuild/RPMS/noarch/break-yum-update-1.0-1.noarch.rpm && \
     rpmbuild -bb /root/break-yum-update-2.spec  && \
-    cp /root/rpmbuild/RPMS/noarch/break-yum-update-1.0-2.noarch.rpm /mnt/localrepo && \
-    createrepo /mnt/localrepo
+    mkdir /mnt/localrepo/break-yum && \
+    cp /root/rpmbuild/RPMS/noarch/break-yum-update-1.0-2.noarch.rpm /mnt/localrepo/break-yum && \
+    createrepo /mnt/localrepo/break-yum
+
+RUN cd /root/rpmbuild/SOURCES && \
+    mkdir atomic-openshift-3.2 && \
+    mkdir atomic-openshift-3.3 && \
+    tar zfc ose.tgz atomic-openshift-3.{2,3} && \
+    rpmbuild -bb /root/ose-3.2.spec  && \
+    rpmbuild -bb /root/ose-3.3.spec  && \
+    mkdir /mnt/localrepo/ose-3.{2,3} && \
+    cp /root/rpmbuild/RPMS/noarch/atomic-openshift*-3.2-1.noarch.rpm /mnt/localrepo/ose-3.2 && \
+    createrepo /mnt/localrepo/ose-3.2 && \
+    cp /root/rpmbuild/RPMS/noarch/atomic-openshift*-3.3-1.noarch.rpm /mnt/localrepo/ose-3.3 && \
+    createrepo /mnt/localrepo/ose-3.3

@@ -3,5 +3,5 @@
   tasks:
   - name: build and tag image
     docker_image:
-      name: check-yum-update
+      name: check-yum-content
       path: docker

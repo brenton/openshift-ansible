@@ -16,7 +16,7 @@ func TestUpgradeDependencyMissing(t *testing.T) {
 	PlaybookTest{
 		Path:     "yum_update/test-upgrade-dependency-missing.yml",
 		ExitCode: 1,
-		Output:   []string{"Could not perform yum update", "Errors from resolution"},
+		Output:   []string{"Could not perform a yum update", "Errors from dependency resolution"},
 	}.Run(t)
 }
 
@@ -40,5 +40,29 @@ func TestYumRepoUnreachable(t *testing.T) {
 		Path:     "yum_update/test-yum-repo-unreachable.yml",
 		ExitCode: 1,
 		Output:   []string{"repo cannot reach its url", "Error getting data from at least one yum repository"},
+	}.Run(t)
+}
+
+func TestCorrectAosVersion(t *testing.T) {
+	PlaybookTest{
+		Path:     "yum_update/test-correct-aos-version.yml",
+		ExitCode: 0,
+		Output:   []string{"version 3.2 matched"},
+	}.Run(t)
+}
+
+func TestIncorrectAosVersion(t *testing.T) {
+	PlaybookTest{
+		Path:     "yum_update/test-incorrect-aos-version.yml",
+		ExitCode: 1,
+		Output:   []string{"Not all of the required packages are available at requested version"},
+	}.Run(t)
+}
+
+func TestMultipleAosVersion(t *testing.T) {
+	PlaybookTest{
+		Path:     "yum_update/test-multiple-aos-version.yml",
+		ExitCode: 1,
+		Output:   []string{"Multiple minor versions of these packages"},
 	}.Run(t)
 }

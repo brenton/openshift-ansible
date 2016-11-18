@@ -2,9 +2,9 @@
 - name: start new test container
   docker_container:
     name: "{{ container_name }}"
-    image: check-yum-update
+    image: check-yum-content
     recreate: true
-    command: sleep infinity
+    command: sleep 300
 
 - name: add container to inventory
   add_host:

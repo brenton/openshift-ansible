@@ -9,10 +9,13 @@
   - name: break the local yum repo
     delegate_to: "{{ container_name }}"
     replace:
-      dest: /etc/yum.repos.d/local.repo
+      dest: /etc/yum.repos.d/break-yum.repo
       backup: no
       regexp: "^baseurl"
       replace: "#baseurl"
+
+  - command: yum-config-manager --enable break-yum
+    delegate_to: "{{ container_name }}"
 
   - name: test should fail; reports broken repo
     delegate_to: "{{ container_name }}"
