@@ -1,0 +1,10 @@
+---
+- hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: test fail 2
+    fail:
+    ignore_errors: yes
+  - name: test fail 2
+    fail:
+    ignore_errors: yes

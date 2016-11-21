@@ -144,6 +144,16 @@ func TestBYOCentOS7(t *testing.T) {
 	}.Run(t)
 }
 
+func TestCallbackPlugin(t *testing.T) {
+	PlaybookTest{
+		Path:     "playbooks/callback_plugin_test.yml",
+		ExitCode: 0,
+		Output: []string{
+			"failed=2",
+		},
+	}.Run(t)
+}
+
 // note: TestPing and TestFail below are just placeholders. The idea is to
 // replace them with tests that call more intesting playbooks. However, the
 // initial structure of the tests may be just like that: run a command, capture
@@ -161,6 +171,6 @@ func TestFail(t *testing.T) {
 	PlaybookTest{
 		Path:     "test_fail.yml",
 		ExitCode: 2,
-		Output:   []string{"[test fail]", `"msg": "Failed as requested from task"`},
+		Output:   []string{"[test fail]", `Failed as requested from task`},
 	}.Run(t)
 }
