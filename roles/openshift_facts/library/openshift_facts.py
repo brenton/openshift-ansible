@@ -7,7 +7,13 @@
 
 """Ansible module for retrieving and setting openshift related facts"""
 
-import ConfigParser
+try:
+    # python2
+    import ConfigParser
+except ImportError:
+    # python3
+    import configparser as ConfigParser
+
 import copy
 import io
 import os
@@ -16,9 +22,14 @@ from distutils.util import strtobool
 from distutils.version import LooseVersion
 import struct
 import socket
-from dbus import SystemBus, Interface
-from dbus.exceptions import DBusException
 
+HAVE_DBUS=False
+try:
+    from dbus import SystemBus, Interface
+    from dbus.exceptions import DBusException
+    HAVE_DBUS=True
+except ImportError:
+    pass
 
 DOCUMENTATION = '''
 ---
@@ -96,14 +107,6 @@ def migrate_node_facts(facts):
                     facts['node'][param] = facts[role].pop(param)
     return facts
 
-def migrate_local_facts(facts):
-    """ Apply migrations of local facts """
-    migrated_facts = copy.deepcopy(facts)
-    migrated_facts = migrate_docker_facts(migrated_facts)
-    migrated_facts = migrate_common_facts(migrated_facts)
-    migrated_facts = migrate_node_facts(migrated_facts)
-    migrated_facts = migrate_hosted_facts(migrated_facts)
-    return migrated_facts
 
 def migrate_hosted_facts(facts):
     """ Apply migrations for master facts """
@@ -121,6 +124,30 @@ def migrate_hosted_facts(facts):
                 facts['hosted']['registry'] = {}
             facts['hosted']['registry']['selector'] = facts['master'].pop('registry_selector')
     return facts
+
+def migrate_admission_plugin_facts(facts):
+    if 'master' in facts:
+        if 'kube_admission_plugin_config' in facts['master']:
+            if 'admission_plugin_config' not in facts['master']:
+                facts['master']['admission_plugin_config'] = dict()
+            # Merge existing kube_admission_plugin_config with admission_plugin_config.
+            facts['master']['admission_plugin_config'] = merge_facts(facts['master']['admission_plugin_config'],
+                                                                     facts['master']['kube_admission_plugin_config'],
+                                                                     additive_facts_to_overwrite=[],
+                                                                     protected_facts_to_overwrite=[])
+            # Remove kube_admission_plugin_config fact
+            facts['master'].pop('kube_admission_plugin_config', None)
+    return facts
+
+def migrate_local_facts(facts):
+    """ Apply migrations of local facts """
+    migrated_facts = copy.deepcopy(facts)
+    migrated_facts = migrate_docker_facts(migrated_facts)
+    migrated_facts = migrate_common_facts(migrated_facts)
+    migrated_facts = migrate_node_facts(migrated_facts)
+    migrated_facts = migrate_hosted_facts(migrated_facts)
+    migrated_facts = migrate_admission_plugin_facts(migrated_facts)
+    return migrated_facts
 
 def first_ip(network):
     """ Return the first IPv4 address in network
@@ -148,6 +175,7 @@ def hostname_valid(hostname):
     if (not hostname or
             hostname.startswith('localhost') or
             hostname.endswith('localdomain') or
+            hostname.endswith('novalocal') or
             len(hostname.split('.')) < 2):
         return False
 
@@ -201,9 +229,9 @@ def query_metadata(metadata_url, headers=None, expect_json=False):
     if info['status'] != 200:
         raise OpenShiftFactsMetadataUnavailableError("Metadata unavailable")
     if expect_json:
-        return module.from_json(result.read())
+        return module.from_json(to_native(result.read()))
     else:
-        return [line.strip() for line in result.readlines()]
+        return [to_native(line.strip()) for line in result.readlines()]
 
 
 def walk_metadata(metadata_url, headers=None, expect_json=False):
@@ -311,7 +339,7 @@ def normalize_aws_facts(metadata, facts):
     ):
         int_info = dict()
         var_map = {'ips': 'local-ipv4s', 'public_ips': 'public-ipv4s'}
-        for ips_var, int_var in var_map.iteritems():
+        for ips_var, int_var in iteritems(var_map):
             ips = interface.get(int_var)
             if isinstance(ips, basestring):
                 int_info[ips_var] = [ips]
@@ -362,12 +390,15 @@ def normalize_openstack_facts(metadata, facts):
     facts['network']['ip'] = local_ipv4
     facts['network']['public_ip'] = metadata['ec2_compat']['public-ipv4']
 
-    # TODO: verify local hostname makes sense and is resolvable
-    facts['network']['hostname'] = metadata['hostname']
-
-    # TODO: verify that public hostname makes sense and is resolvable
-    pub_h = metadata['ec2_compat']['public-hostname']
-    facts['network']['public_hostname'] = pub_h
+    for f_var, h_var, ip_var in [('hostname',        'hostname',        'local-ipv4'),
+                                 ('public_hostname', 'public-hostname', 'public-ipv4')]:
+        try:
+            if socket.gethostbyname(metadata['ec2_compat'][h_var]) == metadata['ec2_compat'][ip_var]:
+                facts['network'][f_var] = metadata['ec2_compat'][h_var]
+            else:
+                facts['network'][f_var] = metadata['ec2_compat'][ip_var]
+        except socket.gaierror:
+            facts['network'][f_var] = metadata['ec2_compat'][ip_var]
 
     return facts
 
@@ -828,23 +859,29 @@ def set_version_facts_if_unset(facts):
                 version_gte_3_1_1_or_1_1_1 = LooseVersion(version) >= LooseVersion('1.1.1')
                 version_gte_3_2_or_1_2 = LooseVersion(version) >= LooseVersion('1.2.0')
                 version_gte_3_3_or_1_3 = LooseVersion(version) >= LooseVersion('1.3.0')
+                version_gte_3_4_or_1_4 = LooseVersion(version) >= LooseVersion('1.4.0')
             else:
                 version_gte_3_1_or_1_1 = LooseVersion(version) >= LooseVersion('3.0.2.905')
                 version_gte_3_1_1_or_1_1_1 = LooseVersion(version) >= LooseVersion('3.1.1')
                 version_gte_3_2_or_1_2 = LooseVersion(version) >= LooseVersion('3.1.1.901')
                 version_gte_3_3_or_1_3 = LooseVersion(version) >= LooseVersion('3.3.0')
+                version_gte_3_4_or_1_4 = LooseVersion(version) >= LooseVersion('3.4.0')
         else:
             version_gte_3_1_or_1_1 = True
             version_gte_3_1_1_or_1_1_1 = True
             version_gte_3_2_or_1_2 = True
-            version_gte_3_3_or_1_3 = False
+            version_gte_3_3_or_1_3 = True
+            version_gte_3_4_or_1_4 = False
         facts['common']['version_gte_3_1_or_1_1'] = version_gte_3_1_or_1_1
         facts['common']['version_gte_3_1_1_or_1_1_1'] = version_gte_3_1_1_or_1_1_1
         facts['common']['version_gte_3_2_or_1_2'] = version_gte_3_2_or_1_2
         facts['common']['version_gte_3_3_or_1_3'] = version_gte_3_3_or_1_3
+        facts['common']['version_gte_3_4_or_1_4'] = version_gte_3_4_or_1_4
 
 
-        if version_gte_3_3_or_1_3:
+        if version_gte_3_4_or_1_4:
+            examples_content_version = 'v1.4'
+        elif version_gte_3_3_or_1_3:
             examples_content_version = 'v1.3'
         elif version_gte_3_2_or_1_2:
             examples_content_version = 'v1.2'
@@ -927,13 +964,21 @@ def set_sdn_facts_if_unset(facts, system_facts):
         # default MTU if interface MTU cannot be detected
         facts['node']['sdn_mtu'] = '1450'
 
-        for val in system_facts.itervalues():
+        for val in itervalues(system_facts):
             if isinstance(val, dict) and 'mtu' in val:
                 mtu = val['mtu']
 
                 if 'ipv4' in val and val['ipv4'].get('address') == node_ip:
                     facts['node']['sdn_mtu'] = str(mtu - 50)
 
+    return facts
+
+def set_nodename(facts):
+    if 'node' in facts and 'common' in facts:
+        if 'cloudprovider' in facts and facts['cloudprovider']['kind'] == 'openstack':
+            facts['node']['nodename'] = facts['provider']['metadata']['hostname'].replace('.novalocal', '')
+        else:
+            facts['node']['nodename'] = facts['common']['hostname'].lower()
     return facts
 
 def migrate_oauth_template_facts(facts):
@@ -1110,7 +1155,7 @@ def build_controller_args(facts):
                     controller_args['cloud-config'] = [cloud_cfg_path + '/openstack.conf']
                 if facts['cloudprovider']['kind'] == 'gce':
                     controller_args['cloud-provider'] = ['gce']
-                    kubelet_args['cloud-config'] = [cloud_cfg_path + '/gce.conf']
+                    controller_args['cloud-config'] = [cloud_cfg_path + '/gce.conf']
         if controller_args != {}:
             facts = merge_facts({'master': {'controller_args': controller_args}}, facts, [], [])
     return facts
@@ -1131,7 +1176,7 @@ def build_api_server_args(facts):
                     api_server_args['cloud-config'] = [cloud_cfg_path + '/openstack.conf']
                 if facts['cloudprovider']['kind'] == 'gce':
                     api_server_args['cloud-provider'] = ['gce']
-                    kubelet_args['cloud-config'] = [cloud_cfg_path + '/gce.conf']
+                    api_server_args['cloud-config'] = [cloud_cfg_path + '/gce.conf']
         if api_server_args != {}:
             facts = merge_facts({'master': {'api_server_args': api_server_args}}, facts, [], [])
     return facts
@@ -1312,7 +1357,7 @@ def apply_provider_facts(facts, provider_facts):
 
         facts['common'][h_var] = choose_hostname(
             [provider_facts['network'].get(h_var)],
-            facts['common'][ip_var]
+            facts['common'][h_var]
         )
 
     facts['provider'] = provider_facts
@@ -1346,7 +1391,7 @@ def merge_facts(orig, new, additive_facts_to_overwrite, protected_facts_to_overw
                             'image_policy_config']
 
     facts = dict()
-    for key, value in orig.iteritems():
+    for key, value in iteritems(orig):
         # Key exists in both old and new facts.
         if key in new:
             if key in inventory_json_facts:
@@ -1543,14 +1588,14 @@ def set_proxy_facts(facts):
             builddefaults['git_http_proxy'] = builddefaults['http_proxy']
         if 'git_https_proxy' not in builddefaults and 'https_proxy' in builddefaults:
             builddefaults['git_https_proxy'] = builddefaults['https_proxy']
-        # If we're actually defining a proxy config then create kube_admission_plugin_config
+        # If we're actually defining a proxy config then create admission_plugin_config
         # if it doesn't exist, then merge builddefaults[config] structure
-        # into kube_admission_plugin_config
-        if 'kube_admission_plugin_config' not in facts['master']:
-            facts['master']['kube_admission_plugin_config'] = dict()
+        # into admission_plugin_config
+        if 'admission_plugin_config' not in facts['master']:
+            facts['master']['admission_plugin_config'] = dict()
         if 'config' in builddefaults and ('http_proxy' in builddefaults or \
                 'https_proxy' in builddefaults):
-            facts['master']['kube_admission_plugin_config'].update(builddefaults['config'])
+            facts['master']['admission_plugin_config'].update(builddefaults['config'])
         facts['builddefaults'] = builddefaults
 
     return facts
@@ -1571,7 +1616,7 @@ def set_container_facts_if_unset(facts):
         cli_image = master_image
         node_image = 'openshift3/node'
         ovs_image = 'openshift3/openvswitch'
-        etcd_image = 'registry.access.redhat.com/rhel7/etcd'
+        etcd_image = 'registry.access.redhat.com/rhel7/etcd3'
         pod_image = 'openshift3/ose-pod'
         router_image = 'openshift3/ose-haproxy-router'
         registry_image = 'openshift3/ose-docker-registry'
@@ -1581,7 +1626,7 @@ def set_container_facts_if_unset(facts):
         cli_image = master_image
         node_image = 'aep3_beta/node'
         ovs_image = 'aep3_beta/openvswitch'
-        etcd_image = 'registry.access.redhat.com/rhel7/etcd'
+        etcd_image = 'registry.access.redhat.com/rhel7/etcd3'
         pod_image = 'aep3_beta/aep-pod'
         router_image = 'aep3_beta/aep-haproxy-router'
         registry_image = 'aep3_beta/aep-docker-registry'
@@ -1591,7 +1636,7 @@ def set_container_facts_if_unset(facts):
         cli_image = master_image
         node_image = 'openshift/node'
         ovs_image = 'openshift/openvswitch'
-        etcd_image = 'registry.access.redhat.com/rhel7/etcd'
+        etcd_image = 'registry.access.redhat.com/rhel7/etcd3'
         pod_image = 'openshift/origin-pod'
         router_image = 'openshift/origin-haproxy-router'
         registry_image = 'openshift/origin-docker-registry'
@@ -1795,6 +1840,7 @@ class OpenShiftFacts(object):
         facts = set_proxy_facts(facts)
         if not safe_get_bool(facts['common']['is_containerized']):
             facts = set_installed_variant_rpm_facts(facts)
+        facts = set_nodename(facts)
         return dict(openshift=facts)
 
     def get_defaults(self, roles, deployment_type, deployment_subtype):
@@ -2099,7 +2145,7 @@ class OpenShiftFacts(object):
             facts_to_set[self.role] = facts
 
         if openshift_env != {} and openshift_env != None:
-            for fact, value in openshift_env.iteritems():
+            for fact, value in iteritems(openshift_env):
                 oo_env_facts = dict()
                 current_level = oo_env_facts
                 keys = self.split_openshift_env_fact_keys(fact, openshift_env_structures)[1:]
@@ -2157,7 +2203,7 @@ class OpenShiftFacts(object):
                 facts (dict): facts to clean
         """
         facts_to_remove = []
-        for fact, value in facts.iteritems():
+        for fact, value in iteritems(facts):
             if isinstance(facts[fact], dict):
                 facts[fact] = self.remove_empty_facts(facts[fact])
             else:
@@ -2252,6 +2298,9 @@ def main():
         add_file_common_args=True,
     )
 
+    if not HAVE_DBUS:
+        module.fail_json(msg="This module requires dbus python bindings")
+
     module.params['gather_subset'] = ['hardware', 'network', 'virtual', 'facter']
     module.params['gather_timeout'] = 10
     module.params['filter'] = '*'
@@ -2288,6 +2337,9 @@ def main():
 from ansible.module_utils.basic import *
 from ansible.module_utils.facts import *
 from ansible.module_utils.urls import *
+from ansible.module_utils.six import iteritems, itervalues
+from ansible.module_utils._text import to_native
+from ansible.module_utils.six import b
 
 if __name__ == '__main__':
     main()

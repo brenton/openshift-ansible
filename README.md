@@ -1,4 +1,5 @@
 [![Join the chat at https://gitter.im/openshift/openshift-ansible](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/openshift/openshift-ansible)
+[![Build Status](https://travis-ci.org/openshift/openshift-ansible.svg?branch=master)](https://travis-ci.org/openshift/openshift-ansible)
 
 # OpenShift Ansible
 
@@ -32,14 +33,18 @@ not practical to start over at 1.0.
 1. Install base dependencies:
 
     ***
+
     Requirements:
-    - Ansible >= 2.1.0 (>= 2.2 is preferred for performance reasons)
+    - Ansible >= 2.2.0
     - Jinja >= 2.7
+    - pyOpenSSL
+    - python-lxml
+
     ***
 
     Fedora:
     ```
-    dnf install -y ansible pyOpenSSL python-cryptography
+    dnf install -y ansible pyOpenSSL python-cryptography python-lxml
     ```
 
 2. Setup for a specific cloud:
