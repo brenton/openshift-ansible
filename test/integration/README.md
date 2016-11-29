@@ -8,5 +8,5 @@ simulated installations in Docker containers.
 From the repository root, run with:
 
 ```
-go test ./test/integration/...
+make test-integration
 ```
