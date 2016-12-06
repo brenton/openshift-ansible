@@ -16,12 +16,12 @@ from ansible.module_utils.basic import AnsibleModule
 
 def main():
     module = AnsibleModule(
-        argument_spec = dict(
-            packages  = dict(type='list', default=[])
+        argument_spec=dict(
+            packages=dict(type='list', default=[])
         ),
-        supports_check_mode = True
+        supports_check_mode=True
     )
-    sys.stdout = os.devnull # mute yum so it doesn't break our output
+    sys.stdout = os.devnull  # mute yum so it doesn't break our output
 
     def _unmute():
         sys.stdout = sys.__stdout__
@@ -54,7 +54,8 @@ def main():
         except yum.Errors.InstallError as e:
             noSuchPkg.append(pkg)
         except:
-            bail("Unexpected error with yum install/update: %s" % sys.exc_info()[1])
+            bail("Unexpected error with yum install/update: %s" %
+                 sys.exc_info()[1])
     if not packages:
         # no packages requested means test a yum update of everything
         yb.update()
@@ -69,12 +70,13 @@ def main():
     try:
         txnResult, txnMsgs = yb.buildTransaction()
     except:
-        bail("Unexpected error during dependency resolution for yum update: \n %s" % sys.exc_info()[1])
+        bail("Unexpected error during dependency resolution for yum update: \n %s" %
+             sys.exc_info()[1])
 
     # find out if there are any errors with the update/install
-    if txnResult == 0: # "normal exit" meaning there's nothing to install/update
+    if txnResult == 0:  # "normal exit" meaning there's nothing to install/update
         pass
-    elif txnResult == 1: # error with transaction
+    elif txnResult == 1:  # error with transaction
         userMsg = "Could not perform a yum update.\n"
         if len(txnMsgs) > 0:
             userMsg += "Errors from dependency resolution:\n"
@@ -94,13 +96,15 @@ def main():
     #   3. other/unknown
     #    * report the problem verbatim
     #    * add to this list as we come across problems we can clearly diagnose
-    elif txnResult == 2: # everything resolved fine
+    elif txnResult == 2:  # everything resolved fine
         pass
     else:
-        bail("Unknown error(s) from dependency resolution. Exit Code: %d:\n%s" % (txnResult, txnMsgs))
+        bail("Unknown error(s) from dependency resolution. Exit Code: %d:\n%s" %
+             (txnResult, txnMsgs))
 
     _unmute()
     module.exit_json(changed=False)
+
 
 if __name__ == '__main__':
     main()

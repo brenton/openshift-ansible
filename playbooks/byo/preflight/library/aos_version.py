@@ -15,18 +15,20 @@ Also, determine if the version requested is available down to the
 precision requested.
 """
 
+
 def main():
     module = AnsibleModule(
-        argument_spec = dict(
-            version   = dict(required=True)
+        argument_spec=dict(
+            version=dict(required=True)
         ),
-        supports_check_mode = True
+        supports_check_mode=True
     )
-    sys.stdout = os.devnull # mute yum so it doesn't break our output
-    #sys.stderr = os.devnull # mute yum so it doesn't break our output
+    sys.stdout = os.devnull  # mute yum so it doesn't break our output
+    # sys.stderr = os.devnull # mute yum so it doesn't break our output
 
     def _unmute():
         sys.stdout = sys.__stdout__
+
     def bail(error):
         _unmute()
         module.fail_json(msg=error)
@@ -34,7 +36,8 @@ def main():
     yb = yum.YumBase()
 
     # search for package versions available for aos pkgs
-    expected_pkgs = ["atomic-openshift", "atomic-openshift-node", "atomic-openshift-master"]
+    expected_pkgs = ["atomic-openshift",
+                     "atomic-openshift-node", "atomic-openshift-master"]
     try:
         pkgs = yb.pkgSack.returnPackages(patterns=expected_pkgs)
     except yum.Errors.PackageSackError as e:
@@ -43,18 +46,20 @@ def main():
 
     # determine what level of precision we're expecting for the version
     expected_version = module.params['version']
-    if expected_version.startswith('v'): # v3.3 => 3.3
+    if expected_version.startswith('v'):  # v3.3 => 3.3
         expected_version = expected_version[1:]
     numDots = expected_version.count('.')
 
     pkgsByNameVersion = {}
     pkgsPreciseVersionFound = {}
     for pkg in pkgs:
-        match_version = '.'.join(pkg.version.split('.')[:numDots+1]) # get expected version precision
+        # get expected version precision
+        match_version = '.'.join(pkg.version.split('.')[:numDots + 1])
         if match_version == expected_version:
             pkgsPreciseVersionFound[pkg.name] = True
-        minor_version = '.'.join(pkg.version.split('.')[:2]) # get x.y version precision
-        if not pkgsByNameVersion.has_key(pkg.name):
+        minor_version = '.'.join(pkg.version.split(
+            '.')[:2])  # get x.y version precision
+        if pkg.name not in pkgsByNameVersion:
             pkgsByNameVersion[pkg.name] = {}
         pkgsByNameVersion[pkg.name][minor_version] = True
 
@@ -63,9 +68,9 @@ def main():
     not_found = []
     multi_found = []
     for name in expected_pkgs:
-        if not pkgsPreciseVersionFound.has_key(name):
+        if name not in pkgsPreciseVersionFound:
             not_found.append(name)
-        if pkgsByNameVersion.has_key(name) and len(pkgsByNameVersion[name]) > 1:
+        if name in pkgsByNameVersion and len(pkgsByNameVersion[name]) > 1:
             multi_found.append(name)
     if not_found:
         msg = "Not all of the required packages are available at requested version %s:\n" % expected_version
@@ -80,6 +85,7 @@ def main():
 
     _unmute()
     module.exit_json(changed=False)
+
 
 if __name__ == '__main__':
     main()

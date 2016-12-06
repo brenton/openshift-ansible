@@ -58,7 +58,8 @@ class CallbackModule(DEFAULT_MODULE.CallbackModule):  # pylint: disable=too-few-
             if key in result:
                 save[key] = result.pop(key)
 
-        output = BASECLASS._dump_results(self, result)  # pylint: disable=protected-access
+        output = BASECLASS._dump_results(
+            self, result)  # pylint: disable=protected-access
 
         for key in ['stdout', 'stderr', 'msg']:
             if key in save and save[key]:
