@@ -29,6 +29,7 @@
 
 - name: Backup etcd
   include: ./etcd/backup.yml
+  when: openshift_upgrade_skip_etcd_backup | default(false) | bool
 
 - name: Upgrade master packages
   hosts: oo_masters_to_config
@@ -61,6 +62,7 @@
     static: yes
   roles:
   - openshift_facts
+  - openshift_master_facts
   tasks:
   - include: "{{ master_config_hook }}"
     when: master_config_hook is defined

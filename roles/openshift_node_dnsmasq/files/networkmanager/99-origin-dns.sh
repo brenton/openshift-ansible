@@ -28,7 +28,7 @@ cd /etc/sysconfig/network-scripts
 
 [ -f ../network ] && . ../network
 
-if [[ $2 =~ ^(up|dhcp4-change)$ ]]; then
+if [[ $2 =~ ^(up|dhcp4-change|dhcp6-change)$ ]]; then
   # If the origin-upstream-dns config file changed we need to restart
   NEEDS_RESTART=0
   UPSTREAM_DNS='/etc/dnsmasq.d/origin-upstream-dns.conf'
@@ -48,7 +48,6 @@ if [[ $2 =~ ^(up|dhcp4-change)$ ]]; then
        -n "${IP4_NAMESERVERS}" ]]; then
     if [ ! -f /etc/dnsmasq.d/origin-dns.conf ]; then
       cat << EOF > /etc/dnsmasq.d/origin-dns.conf
-strict-order
 no-resolv
 domain-needed
 server=/cluster.local/172.30.0.1
@@ -78,6 +77,10 @@ EOF
       # DNS has changed, copy the temp file to the proper location (-Z
       # sets default selinux context) and set the restart flag
       cp -Z $UPSTREAM_DNS_TMP $UPSTREAM_DNS
+      NEEDS_RESTART=1
+    fi
+
+    if ! `systemctl -q is-active dnsmasq.service`; then
       NEEDS_RESTART=1
     fi
 
