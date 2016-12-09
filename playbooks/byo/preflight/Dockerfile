@@ -8,6 +8,7 @@ MAINTAINER "Customer response and diagnostics team" <dev@lists.openshift.redhat.
 ADD . /opt/app-root/src/
 ENV PLAYBOOK_FILE=playbooks/byo/preflight/check.yml \
     INVENTORY_FILE=hosts \
-    ANSIBLE_HOST_KEY_CHECKING=False
+    ANSIBLE_HOST_KEY_CHECKING=False \
+    ALLOW_ANSIBLE_CONNECTION_LOCAL=false
 CMD /usr/libexec/s2i/run
 USER 0
