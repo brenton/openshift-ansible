@@ -106,3 +106,13 @@
           - openssl
           - flannel
           - bind
+
+- hosts: nodes
+  name: determine if all docker content is available
+  gather_facts: no
+  ignore_errors: yes
+  tasks:
+    - name: pull images
+      verify_openshift_image:
+        component: ose
+      tags: work_in_progress
