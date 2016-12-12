@@ -4,7 +4,7 @@
 
 FROM docker.io/aweiteka/playbook2image
 
-MAINTAINER "Customer response and diagnostics team" <dev@lists.openshift.redhat.com>
+MAINTAINER "Customer Success team" <dev@lists.openshift.redhat.com>
 ADD . /opt/app-root/src/
 ENV PLAYBOOK_FILE=playbooks/byo/preflight/check.yml \
     INVENTORY_FILE=hosts \
