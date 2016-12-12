@@ -10,8 +10,8 @@
 - hosts: OSEv3
   name: check content available on all hosts
   gather_facts: no
+  ignore_errors: yes
   tasks:
-  - block:
     - name: determine if yum update will work
       action: check_yum_update
       when:
@@ -22,13 +22,12 @@
       when:
         - not containerized
         - deployment_type == "openshift-enterprise"
-    ignore_errors: yes
 
 - hosts: masters
   name: determine if yum install of master pkgs will work
   gather_facts: no
+  ignore_errors: yes
   tasks:
-  - block:
     - name: main packages for enterprise
       when:
         - not containerized
@@ -60,13 +59,12 @@
           - cockpit-shell
           - cockpit-ws
           - httpd-tools
-    ignore_errors: yes
 
 - hosts: nodes
   name: determine if yum install of node pkgs will work
   gather_facts: no
+  ignore_errors: yes
   tasks:
-  - block:
     - name: main packages for enterprise
       when:
         - not containerized
@@ -108,4 +106,3 @@
           - openssl
           - flannel
           - bind
-    ignore_errors: yes
