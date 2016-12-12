@@ -1,5 +1,5 @@
 ---
-- hosts: OSEv3
+- hosts: OSEv3,masters,nodes
   gather_facts: no
   tasks:
     - set_fact:
