@@ -1,6 +1,6 @@
 # This builds a preflight playbook image for use with Docker.
 # Look at playbooks/byo/preflight/README.md for more information.
-# docker build -t docker.io/sosiouxme/ocp_preflight_playbook -f Dockerfile.preflight .
+# To build, use hack/build-images.sh
 
 FROM docker.io/aweiteka/playbook2image
 
